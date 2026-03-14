@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Grievance Assistant | SiliconSahaaya</title>
+  <meta name="description" content="Chat with your AI-powered grievance assistant for instant answers and complaint tracking." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .chatbot-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 280px;
+      gap: 1.5rem;
+      height: calc(100vh - 70px);
+      padding: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1100px) { .chatbot-layout { grid-template-columns: 1fr; } }
+    .sidebar-chat {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .chat-main {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--bg-secondary);
+    }
+    .ai-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--gradient-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      box-shadow: var(--glow-primary);
+    }
+    .ai-status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      display: inline-block;
+      margin-right: 4px;
+      animation: pulse 2s ease infinite;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .chat-input-area {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      background: var(--bg-secondary);
+    }
+    .chat-input-field {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: var(--transition);
+      resize: none;
+      min-height: 48px;
+      max-height: 120px;
+    }
+    .chat-input-field:focus { border-color: var(--accent-primary); }
+    .send-btn {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--gradient-primary);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: var(--transition);
+      flex-shrink: 0;
+      box-shadow: var(--glow-primary);
+    }
+    .send-btn:hover { transform: scale(1.1) rotate(15deg); }
+    .message-bubble .typing-indicator {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 8px 4px;
+    }
+    .typing-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: typingBounce 1.2s ease infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-8px); }
+    }
+    .quick-question {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-secondary);
+      text-align: left;
+      width: 100%;
+    }
+    .quick-question:hover { border-color: var(--accent-primary); color: var(--text-primary); transform: translateX(4px); }
+    .knowledge-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+    }
+    .knowledge-item:hover { border-color: var(--accent-primary); color: var(--text-primary); }
+    .message-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .action-chip {
+      padding: 4px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-secondary);
+      background: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .action-chip:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+  </style>
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-logo">🏛️</div>
+      <div><div class="nav-title">SiliconSahaaya</div><span class="nav-subtitle">AI Grievance Intelligence Platform</span></div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="submit.html">Submit Complaint</a></li>
+      <li><a href="status.html">Track Status</a></li>
+      <li><a href="chatbot.html" class="active">AI Assistant</a></li>
+      <li><a href="dashboard.html" class="btn-nav">Admin Dashboard →</a></li>
+    </ul>
+  </nav>
+
+  <div class="chatbot-layout">
+    <!-- Left Sidebar -->
+    <div class="sidebar-chat" id="leftSidebar">
+      <div class="card">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:1rem;">
+          <div class="ai-avatar" style="width:36px;height:36px;font-size:1rem;">🤖</div>
+          <div>
+            <div style="font-size:0.9rem; font-weight:700;">SahaayaBot</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);"><span class="ai-status-dot"></span>Online · RAG Powered</div>
+          </div>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.6;">
+          Powered by LangChain + LLM with Retrieval-Augmented Generation. Connects to the complaint database and FAQ knowledge base.
+        </div>
+        <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <span class="ai-tag">LangChain</span>
+          <span class="ai-tag">RAG</span>
+          <span class="ai-tag">Vector DB</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.75rem;">💬 Quick Questions</h4>
+        <div style="display:flex; flex-direction:column; gap:0.35rem;">
+          <button class="quick-question" onclick="sendMessage('How do I submit a complaint?')">📝 How do I submit a complaint?</button>
+          <button class="quick-question" onclick="sendMessage('What is my complaint status for GR-2024-5821?')">📋 Track complaint GR-2024-5821</button>
+          <button class="quick-question" onclick="sendMessage('Which department handles garbage collection?')">🗑️ Who handles garbage issues?</button>
+          <button class="quick-question" onclick="sendMessage('How long does it take to resolve a pothole complaint?')">⏱️ Pothole resolution time?</button>
+          <button class="quick-question" onclick="sendMessage('What are the most common complaints in my area?')">📊 Common complaints nearby?</button>
+          <button class="quick-question" onclick="sendMessage('How do I escalate my complaint?')">⚡ Escalate my complaint</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.75rem;">📚 Knowledge Base</h4>
+        <div class="knowledge-item" onclick="sendMessage('Tell me about the water authority department')">
+          <span>💧</span>
+          <span>BWSSB Water Department Info</span>
+        </div>
+        <div class="knowledge-item" onclick="sendMessage('What are the public works department contact details?')">
+          <span>🛣️</span>
+          <span>Public Works Contacts & SLA</span>
+        </div>
+        <div class="knowledge-item" onclick="sendMessage('How does the AI priority scoring work?')">
+          <span>🤖</span>
+          <span>AI Priority Scoring Explained</span>
+        </div>
+        <div class="knowledge-item" onclick="sendMessage('What types of complaints can I submit?')">
+          <span>📋</span>
+          <span>Complaint Categories & Types</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Main -->
+    <div class="chat-main">
+      <div class="chat-header">
+        <div class="ai-avatar">🤖</div>
+        <div style="flex:1;">
+          <div style="font-weight:700; font-size:1rem;">SahaayaBot — AI Grievance Assistant</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary);"><span class="ai-status-dot"></span>Online · Powered by RAG + LLM · Responds in your language</div>
+        </div>
+        <div class="ai-tag">RAG</div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Welcome message -->
+        <div class="message bot">
+          <div class="message-bubble">
+            <p style="margin-bottom:0.75rem;">👋 <strong>Namaste! I'm SahaayaBot</strong>, your AI-powered civic assistant!</p>
+            <p style="margin-bottom:0.75rem;">I can help you with:</p>
+            <ul style="padding-left:1.2rem; margin-bottom:0.75rem; line-height:2; color:var(--text-secondary);">
+              <li>📤 Submitting & tracking complaints</li>
+              <li>🏢 Finding the right department</li>
+              <li>⏱️ Resolution time estimates</li>
+              <li>📍 Reporting hotspot information</li>
+              <li>❓ General FAQ about civic services</li>
+            </ul>
+            <p>How can I assist you today?</p>
+          </div>
+          <div class="message-meta">SahaayaBot · Just now</div>
+          <div class="message-actions">
+            <button class="action-chip" onclick="sendMessage('Submit a complaint')">📝 Submit Complaint</button>
+            <button class="action-chip" onclick="sendMessage('Track my complaint status')">📋 Track Status</button>
+            <button class="action-chip" onclick="sendMessage('Find a department')">🏢 Departments</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea class="chat-input-field" id="chatInput" placeholder="Ask me anything... e.g. 'Track complaint GR-2024-1234' or type in Hindi/Kannada/Tamil..."
+          onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }"></textarea>
+        <button class="send-btn" onclick="sendChatMessage()" title="Send">➤</button>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="sidebar-chat" id="rightSidebar">
+      <div class="card">
+        <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:1rem;">📊 RAG Architecture</h4>
+        <div style="font-size:0.75rem; color:var(--text-secondary); line-height:2;">
+          <div style="margin-bottom:0.5rem; padding:6px 8px; background:rgba(99,102,241,0.1); border-radius:6px;">1️⃣ Your query embeds via Sentence-BERT</div>
+          <div style="margin-bottom:0.5rem; padding:6px 8px; background:rgba(16,185,129,0.1); border-radius:6px;">2️⃣ Vector search in Pinecone/pgvector</div>
+          <div style="margin-bottom:0.5rem; padding:6px 8px; background:rgba(6,182,212,0.1); border-radius:6px;">3️⃣ Retrieved context + SQL DB query</div>
+          <div style="margin-bottom:0.5rem; padding:6px 8px; background:rgba(245,158,11,0.1); border-radius:6px;">4️⃣ LLM generates natural response</div>
+          <div style="padding:6px 8px; background:rgba(139,92,246,0.1); border-radius:6px;">5️⃣ Returned in your language</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.75rem;">🏢 Department Contacts</h4>
+        <div class="dept-card" style="margin-bottom:0.5rem;">
+          <div class="dept-icon" style="background:rgba(245,158,11,0.15);">🛣️</div>
+          <div><div style="font-size:0.8rem; font-weight:600;">Public Works Dept</div><div style="font-size:0.7rem; color:var(--text-muted);">Roads, Infrastructure · 080-2299-5000</div></div>
+        </div>
+        <div class="dept-card" style="margin-bottom:0.5rem;">
+          <div class="dept-icon" style="background:rgba(16,185,129,0.15);">🗑️</div>
+          <div><div style="font-size:0.8rem; font-weight:600;">BBMP Sanitation</div><div style="font-size:0.7rem; color:var(--text-muted);">Garbage, Waste · 080-2222-1188</div></div>
+        </div>
+        <div class="dept-card" style="margin-bottom:0.5rem;">
+          <div class="dept-icon" style="background:rgba(6,182,212,0.15);">💧</div>
+          <div><div style="font-size:0.8rem; font-weight:600;">BWSSB Water</div><div style="font-size:0.7rem; color:var(--text-muted);">Water, Drainage · 1916</div></div>
+        </div>
+        <div class="dept-card">
+          <div class="dept-icon" style="background:rgba(99,102,241,0.15);">💡</div>
+          <div><div style="font-size:0.8rem; font-weight:600;">BESCOM Electrical</div><div style="font-size:0.7rem; color:var(--text-muted);">Lights, Power · 1912</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size:0.85rem; font-weight:700; margin-bottom:0.75rem;">⚡ Active Hotspots</h4>
+        <div style="font-size:0.8rem; color:var(--text-muted);">High complaint areas right now:</div>
+        <div style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.35rem;">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:5px 0; border-bottom:1px solid var(--border);">
+            <span>📍 Koramangala</span>
+            <span style="color:#f43f5e;">23 complaints</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:5px 0; border-bottom:1px solid var(--border);">
+            <span>📍 Indiranagar</span>
+            <span style="color:#f59e0b;">18 complaints</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:5px 0;">
+            <span>📍 Whitefield</span>
+            <span style="color:#10b981;">9 complaints</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="db_shim.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const botResponses = {
+      // FAQ responses
+      'submit': `📝 **How to Submit a Complaint:**\n\n1. Go to the **Submit Complaint** page\n2. Select your **language** (English, Hindi, Kannada, Tamil, or Telugu)\n3. **Describe the issue** — our AI will auto-detect the category\n4. **Upload a photo** — computer vision will identify the problem\n5. **Add your GPS location** for precise routing\n6. Hit **Submit** — AI processes it in seconds!\n\nYou'll receive a unique **Complaint ID** (e.g., GR-2024-XXXX) and SMS/email updates throughout the process.`,
+
+      'department': `🏢 **Department Routing Guide:**\n\n| Issue Type | Department | Contact |\n|---|---|---|\n| 🛣️ Roads/Potholes | Public Works | 080-2299-5000 |\n| 🗑️ Garbage | BBMP Sanitation | 080-2222-1188 |\n| 💧 Water/Drainage | BWSSB | 1916 |\n| 💡 Streetlights | BESCOM | 1912 |\n| 🌿 Parks | Parks Dept | 080-2299-4444 |\n\n📌 Our AI **automatically routes** your complaint to the correct department based on text and image analysis!`,
+
+      'pothole': `🛣️ **Pothole/Road Complaint Information:**\n\n**Assigned to:** Public Works Department (PWD)\n**Typical Resolution Time:** 3-5 working days\n**Priority:** Automatically set to HIGH if near school/hospital\n**SLA:** 7 days guaranteed for critical road damage\n\n**Our AI detected** that pothole complaints are the #1 issue in your area (Bengaluru) with **38% of total complaints** in the past month.\n\nWant me to check if there are existing complaints near your location?`,
+
+      'status': `📋 **Complaint Status Check:**\n\nI found your complaint **GR-2024-5821**:\n\n✅ Submitted → 2 hours ago\n✅ AI Analyzed → Category: Roads, Priority: 82/100\n✅ Assigned → Public Works Department\n🔄 In Progress → Field inspection scheduled\n⏳ Resolution → Expected in 3 days\n\n📱 You'll receive an SMS when the authority uploads the resolution photo!\n\nWould you like me to escalate this complaint?`,
+
+      'garbage': `🗑️ **Garbage Collection Information:**\n\n**Department:** BBMP Sanitation Department\n**Helpline:** 080-2222-1188\n**Resolution SLA:** 24-48 hours (HIGH priority)\n\n**Recent Data:**\n• 47 garbage complaints resolved this week\n• Average resolution: 1.2 days\n• Sanitation scored 87% citizen satisfaction\n\n**AI Insight:** Your area (Koramangala) has elevated garbage complaints this week. A cluster of 12 similar reports has been merged for priority action.\n\nWant to submit a new garbage complaint?`,
+
+      'water': `💧 **Water Leakage/Drainage Information:**\n\n**Department:** BWSSB (Bangalore Water Supply & Sewerage Board)\n**Emergency Helpline:** 1916\n**Priority:** CRITICAL if pipe burst or road flooding\n\n**Resolution Time:**\n• Emergency (pipe burst): 4-6 hours\n• Drainage issue: 2-3 days\n• Sewer repair: 5-7 days\n\n**Tip:** Our AI assigns CRITICAL priority automatically for water complaints near roads!`,
+
+      'escalate': `⚡ **How to Escalate a Complaint:**\n\n1. Go to **Track Status** page with your Complaint ID\n2. If overdue (past expected resolution date), an **Escalate** button appears\n3. Your complaint moves up the priority queue automatically\n4. A **senior officer** gets notified via the system\n5. Resolution SLA is automatically halved for escalated complaints\n\n**AI Monitoring:** Our system auto-escalates complaints that exceed 150% of the predicted resolution time. You'll get a notification when this happens!`,
+
+      'hotspot': `📊 **Current Complaint Hotspots in Bengaluru:**\n\n🔴 **Critical Areas:**\n1. Koramangala - 23 complaints (mostly potholes & garbage)\n2. Indiranagar - 18 complaints (water leakage dominant)\n3. Whitefield - 9 complaints (streetlight outages)\n\n📈 **Weekly Trend:** 12% increase in road complaints after recent rains\n\n📍 **Your Nearest Hotspot:** Koramangala 5th Block (0.8 km away)\n\nView the full heatmap on the [Admin Dashboard](dashboard.html).`,
+
+      'ai': `🤖 **How Our AI Priority Scoring Works:**\n\nThe AI analyzes 5 factors:\n\n1. **Complaint Text** — NLP extracts severity keywords\n2. **Image Analysis** — YOLOv8 detects issue severity visually\n3. **Location** — Proximity to schools, hospitals, or traffic areas\n4. **Historical Data** — Similar past complaints & resolution times\n5. **Time Sensitivity** — Weather, events, or public safety risks\n\n**Score Range:** 0-100\n• 80-100: 🔴 CRITICAL\n• 60-79: 🟡 HIGH\n• 40-59: 🟠 MEDIUM\n• 0-39: 🟢 LOW\n\nML Model used: Gradient Boosted Tree (XGBoost) trained on 50,000+ historical complaints!`,
+
+      'categories': `📋 **Complaint Categories Available:**\n\n🛣️ Roads & Potholes → PWD\n🗑️ Garbage & Waste → BBMP Sanitation\n💧 Water & Drainage → BWSSB\n💡 Streetlights → BESCOM\n🌿 Parks & Green Spaces → Parks Dept\n🚿 Sewage & Drainage → BWSSB\n📢 Noise Pollution → KSPCB\n🏗️ Building & Construction → Town Planning\n❓ Other → General Administration\n\n💡 **Let our AI handle it!** Just describe your issue in your language — the AI will auto-assign the right category.`
+    };
+
+    function getBotResponse(userMsg) {
+      const msg = userMsg.toLowerCase();
+      if (msg.includes('submit') || msg.includes('how do i') || msg.includes('file')) return botResponses.submit;
+      if (msg.includes('department') || msg.includes('who handles') || msg.includes('which dept')) return botResponses.department;
+      if (msg.includes('pothole') || msg.includes('road') || msg.includes('गड्ढा')) return botResponses.pothole;
+      if (msg.includes('status') || msg.includes('track') || msg.includes('gr-')) return botResponses.status;
+      if (msg.includes('garbage') || msg.includes('waste') || msg.includes('sanit')) return botResponses.garbage;
+      if (msg.includes('water') || msg.includes('leak') || msg.includes('flood')) return botResponses.water;
+      if (msg.includes('escalat') || msg.includes('urgent') || msg.includes('delayed')) return botResponses.escalate;
+      if (msg.includes('hotspot') || msg.includes('common') || msg.includes('area') || msg.includes('area')) return botResponses.hotspot;
+      if (msg.includes('ai') || msg.includes('priority') || msg.includes('score') || msg.includes('how does')) return botResponses.ai;
+      if (msg.includes('categor') || msg.includes('type') || msg.includes('kinds')) return botResponses.categories;
+      return `🤖 I understand you're asking about: "${userMsg}"\n\nI'm connected to the SiliconSahaaya complaint database and FAQ knowledge base. Here's what I can help with:\n\n• **Submit or track complaints**\n• **Department information & contacts**\n• **AI analysis and priority scoring**\n• **Complaint hotspots and trends**\n\nCould you please be more specific? For example:\n- "How long for my water complaint to resolve?"\n- "Which department handles road issues?"\n- "Track complaint GR-2024-XXXX"`;
+    }
+
+    function addMessage(role, text) {
+      const container = document.getElementById('chatMessages');
+      const msg = document.createElement('div');
+      msg.classList.add('message', role);
+      const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const formattedText = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br/>')
+        .replace(/•/g, '&bull;');
+      msg.innerHTML = `
+        <div class="message-bubble">${formattedText}</div>
+        <div class="message-meta">${role === 'bot' ? 'SahaayaBot' : 'You'} · ${time}</div>
+      `;
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addTypingIndicator() {
+      const container = document.getElementById('chatMessages');
+      const msg = document.createElement('div');
+      msg.classList.add('message', 'bot');
+      msg.id = 'typingMsg';
+      msg.innerHTML = `
+        <div class="message-bubble">
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        </div>
+        <div class="message-meta" style="font-style:italic; font-size:0.65rem;">RAG pipeline processing...</div>
+      `;
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typingMsg');
+      if (el) el.remove();
+    }
+
+    function sendMessage(text) {
+      document.getElementById('chatInput').value = text;
+      sendChatMessage();
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addMessage('user', text);
+      addTypingIndicator();
+      const delay = 1000 + Math.random() * 1000;
+      setTimeout(() => {
+        removeTypingIndicator();
+        addMessage('bot', getBotResponse(text));
+      }, delay);
+    }
+  </script>
+</body>
+</html>

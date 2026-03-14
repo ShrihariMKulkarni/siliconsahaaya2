@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SiliconSahaaya | AI-Powered Public Grievance Platform</title>
+  <meta name="description"
+    content="AI-Powered Public Grievance Intelligence & Resolution Platform. Submit complaints, track resolution, and engage with smart city services." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Hero section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      animation: float 6s ease infinite;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.5;
+      }
+
+      50% {
+        transform: translateY(-20px) rotate(180deg);
+        opacity: 1;
+      }
+    }
+
+    .hero-content {
+      max-width: 700px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      border-radius: 30px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #818cf8;
+      margin-bottom: 1.5rem;
+      animation: slideDown 0.6s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 1.5rem;
+      animation: slideUp2 0.7s ease 0.1s both;
+    }
+
+    @keyframes slideUp2 {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 2.5rem;
+      animation: slideUp2 0.7s ease 0.2s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      animation: slideUp2 0.7s ease 0.3s both;
+    }
+
+    .hero-visual {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 45%;
+      max-width: 600px;
+      pointer-events: none;
+    }
+
+    .hero-graphic {
+      width: 100%;
+      aspect-ratio: 1;
+      position: relative;
+    }
+
+    .orbit {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px dashed rgba(99, 102, 241, 0.3);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      to {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    .orbit-1 {
+      width: 200px;
+      height: 200px;
+    }
+
+    .orbit-2 {
+      width: 340px;
+      height: 340px;
+      animation-duration: 30s;
+      animation-direction: reverse;
+    }
+
+    .orbit-3 {
+      width: 480px;
+      height: 480px;
+      animation-duration: 40s;
+    }
+
+    .orbit-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+      top: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .orbit-icon {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .hero-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100px;
+      height: 100px;
+      border-radius: 24px;
+      background: var(--gradient-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      box-shadow: var(--glow-primary);
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      padding: 2rem 0;
+    }
+
+    .mini-stat {
+      text-align: center;
+      padding: 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: var(--transition);
+    }
+
+    .mini-stat:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-primary);
+    }
+
+    .mini-stat-val {
+      font-size: 2rem;
+      font-weight: 900;
+      font-family: 'Outfit', sans-serif;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .mini-stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Feature cards */
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--gradient-primary);
+      transform: scaleX(0);
+      transition: var(--transition);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--border-light);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .feature-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .feature-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Process steps */
+    .process-steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      position: relative;
+    }
+
+    .process-steps::before {
+      content: '';
+      position: absolute;
+      top: 32px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    }
+
+    .process-step {
+      text-align: center;
+      padding: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-num {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--gradient-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin: 0 auto 1rem;
+      box-shadow: var(--glow-primary);
+      border: 3px solid var(--bg-primary);
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .step-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Mini map preview */
+    #miniMap {
+      height: 300px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    /* CTA section */
+    .cta-section {
+      text-align: center;
+      padding: 5rem 0;
+      position: relative;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      .hero-visual {
+        display: none;
+      }
+
+      .process-steps {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .process-steps {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .process-steps::before {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-logo">🏛️</div>
+      <div>
+        <div class="nav-title">SiliconSahaaya</div>
+        <span class="nav-subtitle">AI Grievance Intelligence Platform</span>
+      </div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="submit.html">Submit Complaint</a></li>
+      <li><a href="status.html">Track Status</a></li>
+      <li><a href="chatbot.html">AI Assistant</a></li>
+      <li><a href="dashboard.html" class="btn-nav">Admin Dashboard →</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-particles" id="particles"></div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span>🤖</span>
+          <span>AI-POWERED CIVIC PLATFORM</span>
+          <span class="badge badge-emerald" style="font-size:0.65rem">LIVE</span>
+        </div>
+        <h1 class="hero-title">
+          Your Voice, <span class="gradient-text">Amplified by AI</span>,<br>
+          Your City, Made Smarter
+        </h1>
+        <p class="hero-desc">
+          SiliconSahaaya is an intelligent grievance resolution platform that uses cutting-edge AI to understand,
+          prioritize, and route your complaints — in your language — directly to the right authorities.
+        </p>
+        <div class="hero-actions">
+          <a href="submit.html" class="btn btn-primary btn-lg">🚀 Submit Complaint</a>
+          <a href="status.html" class="btn btn-outline btn-lg">📋 Track My Complaint</a>
+          <a href="chatbot.html" class="btn btn-ghost btn-lg">💬 Ask AI Assistant</a>
+        </div>
+      </div>
+    </div>
+    <!-- Animated Visual -->
+    <div class="hero-visual" aria-hidden="true">
+      <div class="hero-graphic">
+        <div class="orbit orbit-1">
+          <div class="orbit-dot"></div>
+        </div>
+        <div class="orbit orbit-2" style="animation-duration:30s">
+          <div class="orbit-dot" style="background:#10b981"></div>
+        </div>
+        <div class="orbit orbit-3" style="animation-duration:45s">
+          <div class="orbit-dot" style="background:#f59e0b"></div>
+        </div>
+        <div class="hero-center">🏛️</div>
+        <div class="orbit-icon" style="top:20%;right:25%;">🗺️</div>
+        <div class="orbit-icon" style="bottom:20%;left:20%;">🤖</div>
+        <div class="orbit-icon" style="top:50%;right:10%;">📷</div>
+        <div class="orbit-icon" style="bottom:10%;right:35%;">📊</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Row -->
+  <section style="padding:2rem 0; position:relative; z-index:1;">
+    <div class="container">
+      <div class="stats-row stagger">
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="countComplaints">0</div>
+          <div class="mini-stat-label">Complaints Processed</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="countResolved">0</div>
+          <div class="mini-stat-label">Issues Resolved</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="countDepts">0</div>
+          <div class="mini-stat-label">Departments Integrated</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-val" id="countLangs">0</div>
+          <div class="mini-stat-label">Languages Supported</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="page-content">
+    <div class="container">
+      <div class="section-head" style="text-align:center;">
+        <div class="section-tag">⚡ Platform Features</div>
+        <h2 class="section-title">10 AI-Powered Features<br>Transforming <span class="gradient-text">Civic
+            Services</span></h2>
+        <p class="section-desc" style="margin:0 auto;">Every feature is designed to make governance smarter, faster, and
+          more citizen-centric.</p>
+      </div>
+      <div class="grid grid-3 stagger" style="margin-top:2rem;">
+        <!-- Feature Cards -->
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(99,102,241,0.15);">🌐</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 1</div>
+          <div class="feature-title">Multi-Language Understanding</div>
+          <p class="feature-desc">Submit complaints in Hindi, Kannada, Tamil, Telugu, or English. Our AI translates and
+            classifies automatically.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(16,185,129,0.15);">🤖</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 2</div>
+          <div class="feature-title">AI Grievance Chatbot</div>
+          <p class="feature-desc">RAG-powered assistant answers questions about complaint status, departments, and
+            processes 24/7.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(6,182,212,0.15);">📷</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 3</div>
+          <div class="feature-title">Image-Based Issue Detection</div>
+          <p class="feature-desc">Upload a photo — our computer vision model detects potholes, garbage, broken lights,
+            and water leakage.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(245,158,11,0.15);">🔍</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 4</div>
+          <div class="feature-title">Duplicate Complaint Detection</div>
+          <p class="feature-desc">Semantic embedding similarity merges duplicate complaints into clusters to prioritize
+            hotspots.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(244,63,94,0.15);">🗺️</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 5</div>
+          <div class="feature-title">Geo-Spatial Heatmaps</div>
+          <p class="feature-desc">Interactive city maps showing complaint hotspots, ward-level analytics, and recurring
+            issues.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(99,102,241,0.15);">🏢</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 6</div>
+          <div class="feature-title">Automated Department Routing</div>
+          <p class="feature-desc">AI automatically assigns complaints to the right department — no manual intervention
+            needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(16,185,129,0.15);">✅</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 7</div>
+          <div class="feature-title">Resolution Verification</div>
+          <p class="feature-desc">Authorities upload before/after photos as proof. Citizens confirm resolution —
+            transparent & tamper-proof.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(249,115,22,0.15);">⏱️</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 8</div>
+          <div class="feature-title">Resolution Time Prediction</div>
+          <p class="feature-desc">ML regression model trained on historical data predicts ETA and flags delayed cases
+            automatically.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(139,92,246,0.15);">📊</div>
+          <div class="ai-tag" style="margin-bottom:0.75rem;">Feature 9</div>
+          <div class="feature-title">Smart City Reports</div>
+          <p class="feature-desc">Auto-generated weekly reports with department performance metrics. Download as PDF
+            instantly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="page-content" style="background:var(--bg-secondary); padding:4rem 0;">
+    <div class="container">
+      <div class="section-head" style="text-align:center; margin-bottom:3rem;">
+        <div class="section-tag">🔄 Process</div>
+        <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
+      </div>
+      <div class="process-steps stagger">
+        <div class="process-step">
+          <div class="step-num">📝</div>
+          <div class="step-title">Submit Complaint</div>
+          <div class="step-desc">Text, image, or voice in any language</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">🧠</div>
+          <div class="step-title">AI Analyzes</div>
+          <div class="step-desc">Translation, classification & vision detection</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">🎯</div>
+          <div class="step-title">Auto Route</div>
+          <div class="step-desc">Assigned to correct department automatically</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">🔧</div>
+          <div class="step-title">Issue Fixed</div>
+          <div class="step-desc">Authority resolves with photo proof</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">⭐</div>
+          <div class="step-title">Rate & Close</div>
+          <div class="step-desc">Citizen confirms and rates the resolution</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live City Map Preview -->
+  <section class="page-content">
+    <div class="container">
+      <div class="section-head"
+        style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <div class="section-tag">🗺️ Live Map</div>
+          <h2 class="section-title">City Complaint <span class="gradient-text">Heatmap</span></h2>
+          <p class="section-desc">See complaint hotspots across the city in real-time.</p>
+        </div>
+        <a href="dashboard.html#map" class="btn btn-primary">View Full Map →</a>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div id="miniMap"></div>
+        <div
+          style="padding:1rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+          <div class="heatmap-legend">
+            <span>Low</span>
+            <div class="legend-gradient"></div>
+            <span>High</span>
+          </div>
+          <div style="display:flex; gap:1rem; font-size:0.8rem; color:var(--text-muted);">
+            <span>🔴 High Priority</span>
+            <span>🟡 Medium Priority</span>
+            <span>🟢 Resolved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="section-tag" style="justify-content:center;">🚀 Get Started</div>
+      <h2 class="section-title" style="font-size:3rem; margin-bottom:1rem;">
+        Be the Change <span class="gradient-text">Your City Needs</span>
+      </h2>
+      <p class="section-desc" style="font-size:1.1rem; margin: 0 auto 2.5rem; text-align:center;">
+        Join thousands of citizens who are making their cities smarter, one complaint at a time.
+      </p>
+      <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+        <a href="submit.html" class="btn btn-primary btn-lg">📤 Submit a Complaint</a>
+        <a href="chatbot.html" class="btn btn-outline btn-lg">💬 Chat with AI Assistant</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div style="margin-bottom:0.5rem;">
+      🏛️ <strong>SiliconSahaaya</strong> — AI-Powered Public Grievance Intelligence Platform
+    </div>
+    <div style="display:flex; gap:1.5rem; justify-content:center; margin:0.5rem 0;">
+      <a href="index.html" style="color:var(--text-muted); text-decoration:none;">Home</a>
+      <a href="submit.html" style="color:var(--text-muted); text-decoration:none;">Submit</a>
+      <a href="status.html" style="color:var(--text-muted); text-decoration:none;">Track</a>
+      <a href="chatbot.html" style="color:var(--text-muted); text-decoration:none;">Chatbot</a>
+      <a href="dashboard.html" style="color:var(--text-muted); text-decoration:none;">Dashboard</a>
+    </div>
+    <div style="margin-top:0.5rem; color:var(--text-muted); font-size:0.75rem;">Built for Hackathon Demo · Powered by AI
+      · 2026</div>
+  </footer>
+
+  <!-- FAB Chatbot link -->
+  <a href="chatbot.html" class="fab" title="Open AI Assistant">💬</a>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="db_shim.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Animate counters
+    function animateCounter(el, target, suffix = '') {
+      let start = 0;
+      const step = Math.max(target / 60, 1);
+      const timer = setInterval(() => {
+        start += step;
+        if (start >= target) { start = target; clearInterval(timer); }
+        el.textContent = Math.floor(start).toLocaleString() + suffix;
+      }, 20);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const complaints = JSON.parse(localStorage.getItem('complaints') || '[]');
+          const resolved = complaints.filter(c => c.status && c.status.toLowerCase().includes('resolved'));
+          animateCounter(document.getElementById('countComplaints'), complaints.length);
+          animateCounter(document.getElementById('countResolved'), resolved.length);
+          animateCounter(document.getElementById('countDepts'), 8);
+          animateCounter(document.getElementById('countLangs'), 5);
+          observer.disconnect();
+        }
+      });
+    });
+    observer.observe(document.getElementById('countComplaints'));
+
+    // Particles
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.classList.add('particle');
+      const size = Math.random() * 6 + 2;
+      p.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random() * 100}%;
+        top:${Math.random() * 100}%;
+        background:${['#6366f1', '#8b5cf6', '#10b981', '#06b6d4'][Math.floor(Math.random() * 4)]};
+        opacity:${Math.random() * 0.4 + 0.1};
+        animation-delay:${Math.random() * 6}s;
+        animation-duration:${4 + Math.random() * 4}s;
+      `;
+      container.appendChild(p);
+    }
+
+    // Mini Map
+    const map = L.map('miniMap', { scrollWheelZoom: false, zoomControl: false }).setView([12.9716, 77.5946], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+    // Complaint markers from real localStorage data
+    const allComplaints = JSON.parse(localStorage.getItem('complaints') || '[]');
+    allComplaints.forEach(c => {
+      const lat = parseFloat(c.lat);
+      const lng = parseFloat(c.lng);
+      if (!lat || !lng) return;
+      const isResolved = c.status && c.status.toLowerCase().includes('resolved');
+      const color = isResolved ? '#10b981' : (c.priority >= 85 ? '#f43f5e' : '#f59e0b');
+      const statusIcon = isResolved ? '🟢' : (c.priority >= 85 ? '🔴' : '🟡');
+      const icon = L.divIcon({
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.8);box-shadow:0 0 8px ${color}"></div>`,
+        iconSize: [14, 14],
+        className: ''
+      });
+      L.marker([lat, lng], { icon }).addTo(map)
+        .bindPopup(`<b>${statusIcon} ${c.cat || 'Issue'}</b><br>${c.text ? c.text.slice(0, 50) : ''}`);
+    });
+    if (!allComplaints.length) {
+      map.setView([12.9716, 77.5946], 12);
+    }
+  </script>
+</body>
+
+</html>

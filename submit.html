@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submit Complaint | SiliconSahaaya</title>
+  <meta name="description" content="Submit your civic grievance in any language. AI-powered detection and automatic department routing." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    .submit-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .submit-layout { grid-template-columns: 1fr; } }
+    .lang-selector {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .lang-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: 'Inter', sans-serif;
+    }
+    .lang-btn:hover { border-color: var(--accent-primary); color: var(--text-primary); }
+    .lang-btn.selected { background: rgba(99,102,241,0.2); border-color: var(--accent-primary); color: #818cf8; }
+    .ai-analysis-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-top: 1rem;
+    }
+    .ai-result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .ai-result-row:last-child { border-bottom: none; }
+    .ai-result-label { color: var(--text-muted); }
+    .ai-result-value { font-weight: 600; }
+    #locationMap { height: 200px; border-radius: var(--radius-sm); overflow: hidden; margin-top: 0.5rem; }
+    .image-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .preview-item {
+      aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      position: relative;
+    }
+    .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .cv-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 4px;
+      opacity: 0;
+      transition: 0.3s;
+    }
+    .preview-item:hover .cv-overlay { opacity: 1; }
+    .cv-overlay span { font-size: 0.65rem; color: #10b981; font-weight: 700; }
+    .detection-badge {
+      position: absolute;
+      top: 4px; left: 4px;
+      background: rgba(16,185,129,0.9);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .side-widget { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+    .dept-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      margin-top: 0.75rem;
+    }
+    .similar-complaint {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+      border-left: 3px solid var(--accent-amber);
+    }
+    .priority-meter {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--bg-secondary);
+      margin-top: 0.75rem;
+      overflow: hidden;
+    }
+    .priority-fill-bar {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--gradient-amber);
+      transition: width 1s ease;
+    }
+    .translate-box {
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .translate-box.show { display: block; animation: fadeIn 0.3s ease; }
+    .step-indicators {
+      display: flex;
+      gap: 0;
+      margin-bottom: 2rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 0.25rem;
+    }
+    .step-ind {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      cursor: default;
+    }
+    .step-ind.active { background: var(--bg-card); color: var(--text-primary); }
+    .step-ind.done { color: var(--accent-emerald); }
+  </style>
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-logo">🏛️</div>
+      <div>
+        <div class="nav-title">SiliconSahaaya</div>
+        <span class="nav-subtitle">AI Grievance Intelligence Platform</span>
+      </div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="submit.html" class="active">Submit Complaint</a></li>
+      <li><a href="status.html">Track Status</a></li>
+      <li><a href="chatbot.html">AI Assistant</a></li>
+      <li><a href="dashboard.html" class="btn-nav">Admin Dashboard →</a></li>
+    </ul>
+  </nav>
+
+  <!-- Page Hero -->
+  <div class="page-hero" style="padding-top:3rem; padding-bottom:2rem;">
+    <div class="container">
+      <div class="section-tag">📤 Submit Complaint</div>
+      <h1 class="section-title" style="font-size:2.5rem;">Report a Civic Issue</h1>
+      <p class="section-desc">AI will automatically detect the issue type, translate your text, and route it to the right department.</p>
+    </div>
+  </div>
+
+  <div class="page-content" style="padding-top:0;">
+    <div class="container">
+      <!-- Step Indicators -->
+      <div class="step-indicators" id="stepIndicators">
+        <div class="step-ind active" id="step1ind">① Details</div>
+        <div class="step-ind" id="step2ind">② Location</div>
+        <div class="step-ind" id="step3ind">③ Upload Photos</div>
+        <div class="step-ind" id="step4ind">④ Review & Submit</div>
+      </div>
+
+      <div class="submit-layout">
+        <!-- Main Form -->
+        <div>
+          <form id="complaintForm">
+            <!-- Step 1: Details -->
+            <div id="formStep1" class="card" style="margin-bottom:1.5rem;">
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:1.5rem; color:var(--text-primary);">
+                🌐 Complaint Details
+                <span class="ai-tag" style="float:right;">AI-Assisted</span>
+              </h3>
+
+              <!-- Language Selector -->
+              <div class="form-group">
+                <label class="form-label">Language / भाषा / ಭಾಷೆ</label>
+                <div class="lang-selector">
+                  <button type="button" class="lang-btn selected" data-lang="en" onclick="selectLang(this, 'en')">🇬🇧 English</button>
+                  <button type="button" class="lang-btn" data-lang="hi" onclick="selectLang(this, 'hi')">🇮🇳 हिंदी</button>
+                  <button type="button" class="lang-btn" data-lang="kn" onclick="selectLang(this, 'kn')">🇮🇳 ಕನ್ನಡ</button>
+                  <button type="button" class="lang-btn" data-lang="ta" onclick="selectLang(this, 'ta')">🇮🇳 தமிழ்</button>
+                  <button type="button" class="lang-btn" data-lang="te" onclick="selectLang(this, 'te')">🇮🇳 తెలుగు</button>
+                </div>
+              </div>
+
+              <!-- Complaint Text -->
+              <div class="form-group">
+                <label class="form-label">Describe Your Issue</label>
+                <textarea class="form-control" id="complaintText" rows="5"
+                  placeholder="Describe the issue... e.g. 'There is a huge pothole on MG Road near metro station'"
+                  oninput="analyzeText(this.value)"></textarea>
+                <!-- Translation Preview -->
+                <div class="translate-box" id="translateBox">
+                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:0.5rem; color:#818cf8; font-size:0.75rem; font-weight:700;">
+                    🤖 AI TRANSLATION
+                  </div>
+                  <div id="translatedText" style="color:var(--text-secondary);"></div>
+                </div>
+              </div>
+
+              <!-- Category -->
+              <div class="form-group">
+                <label class="form-label">Category (Auto-detected by AI)</label>
+                <select class="form-control" id="complaintCategory" onchange="updateRouting()">
+                  <option value="">Select or let AI detect...</option>
+                  <option value="roads">🛣️ Roads & Potholes</option>
+                  <option value="garbage">🗑️ Garbage & Waste</option>
+                  <option value="water">💧 Water Leakage / Drainage</option>
+                  <option value="streetlight">💡 Streetlights</option>
+                  <option value="sewage">🚿 Sewage</option>
+                  <option value="parks">🌿 Parks & Public Spaces</option>
+                  <option value="noise">📢 Noise Pollution</option>
+                  <option value="other">❓ Other</option>
+                </select>
+              </div>
+
+              <!-- AI Analysis Result -->
+              <div class="ai-analysis-box" id="aiAnalysisBox" style="display:none;">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:1rem; color:#818cf8; font-size:0.8rem; font-weight:700;">
+                  <span class="spinner" style="width:14px;height:14px;border-width:1.5px;" id="aiSpinner"></span>
+                  AI Analysis Complete
+                </div>
+                <div class="ai-result-row">
+                  <span class="ai-result-label">🌐 Detected Language</span>
+                  <span class="ai-result-value" id="detectedLang">—</span>
+                </div>
+                <div class="ai-result-row">
+                  <span class="ai-result-label">🏷️ Predicted Category</span>
+                  <span class="ai-result-value" id="predictedCategory">—</span>
+                </div>
+                <div class="ai-result-row">
+                  <span class="ai-result-label">🚨 Urgency Level</span>
+                  <span class="ai-result-value" id="urgencyLevel">—</span>
+                </div>
+                <div class="ai-result-row">
+                  <span class="ai-result-label">😠 Sentiment</span>
+                  <span class="ai-result-value" id="sentimentScore">—</span>
+                </div>
+                <div class="ai-result-row">
+                  <span class="ai-result-label">⏱️ Predicted ETA</span>
+                  <span class="ai-result-value" id="predictedETA">—</span>
+                </div>
+                <div class="ai-result-row">
+                  <span class="ai-result-label">🎯 Priority Score</span>
+                  <span class="ai-result-value" id="priorityScore">—</span>
+                </div>
+                <div class="priority-meter">
+                  <div class="priority-fill-bar" id="priorityBar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Location -->
+            <div class="card" style="margin-bottom:1.5rem;">
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:1.5rem;">📍 Issue Location</h3>
+              <div class="form-group">
+                <label class="form-label">Address / Landmark</label>
+                <input type="text" class="form-control" id="locationText" placeholder="e.g. MG Road, Near Metro Station, Bengaluru" />
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                  <label class="form-label">Latitude</label>
+                  <input type="number" class="form-control" id="lat" step="any" placeholder="12.9716" value="12.9716" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Longitude</label>
+                  <input type="number" class="form-control" id="lng" step="any" placeholder="77.5946" value="77.5946" />
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" onclick="getCurrentLocation()" style="margin-bottom:1rem;">
+                📡 Use My Current GPS Location
+              </button>
+              <div id="locationMap"></div>
+            </div>
+
+            <!-- Step 3: Image Upload -->
+            <div class="card" style="margin-bottom:1.5rem;">
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">
+                📷 Upload Photos
+                <span class="ai-tag" style="float:right;">Computer Vision</span>
+              </h3>
+              <div class="upload-zone" id="uploadZone">
+                <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImages(this.files)">
+                <div style="font-size:2.5rem; margin-bottom:1rem;">📤</div>
+                <div style="font-weight:600; margin-bottom:0.5rem;">Drop images here or click to upload</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">AI will automatically detect civic issues from your photos</div>
+              </div>
+              <div class="image-preview-grid" id="imagePreviewGrid"></div>
+              <!-- CV Detection Results -->
+              <div id="cvResults" style="display:none; margin-top:1rem;">
+                <div style="display:flex; align-items:center; gap:6px; color:#06b6d4; font-size:0.8rem; font-weight:700; margin-bottom:0.75rem;">
+                  🔍 IMAGE ANALYSIS RESULTS
+                </div>
+                <div id="cvDetectionList"></div>
+              </div>
+            </div>
+
+            <!-- Step 4: Contact -->
+            <div class="card" style="margin-bottom:1.5rem;">
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:1.5rem;">👤 Your Contact Details</h3>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" class="form-control" id="citizenName" placeholder="Rajesh Kumar" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone Number</label>
+                  <input type="tel" class="form-control" id="citizenPhone" placeholder="+91 98765 43210" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email <span style="color:#f43f5e;">*</span> <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">(Required for notifications)</span></label>
+                <input type="email" class="form-control" id="citizenEmail" placeholder="rajesh@example.com" required />
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary);">
+                  <input type="checkbox" id="notifyCheck" checked style="width:16px;height:16px;" />
+                  Receive email updates when your complaint is received and resolved
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg" style="width:100%; justify-content:center;" id="submitBtn">
+              🚀 Submit Complaint with AI Analysis
+            </button>
+          </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+          <!-- Department Routing -->
+          <div class="side-widget">
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.75rem;">
+              🏢 Auto-Routing to Department
+              <span class="ai-tag" style="float:right;">AI</span>
+            </h4>
+            <div class="dept-badge" id="deptBadge">
+              <span style="font-size:1.5rem;">🏛️</span>
+              <div>
+                <div style="font-size:0.9rem; font-weight:600;" id="deptName">Awaiting Analysis...</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);" id="deptDesc">Describe your issue to route automatically</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Duplicate Check -->
+          <div class="side-widget">
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.75rem;">
+              🔍 Duplicate Detection
+              <span class="ai-tag" style="float:right;">Embeddings</span>
+            </h4>
+            <div id="duplicateStatus">
+              <div class="alert alert-info" style="font-size:0.8rem;">Describe your issue to check for similar complaints</div>
+            </div>
+          </div>
+
+          <!-- Tip on Photos -->
+          <div class="side-widget">
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.75rem;">💡 Tips for Better Results</h4>
+            <ul style="font-size:0.8rem; color:var(--text-muted); padding-left:1.2rem; line-height:2;">
+              <li>Take clear photos in daylight</li>
+              <li>Include a landmark in the background</li>
+              <li>Multiple angles help AI detect issues</li>
+              <li>Add GPS location for faster routing</li>
+              <li>Describe severity in your complaint text</li>
+            </ul>
+          </div>
+
+          <!-- Similar Complaints -->
+          <div class="side-widget" id="similarPanel" style="display:none;">
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.75rem;">⚠️ Similar Complaints Nearby</h4>
+            <div id="similarList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay hidden" id="successModal">
+    <div class="modal-content" style="text-align:center;">
+      <div style="font-size:4rem; margin-bottom:1rem;">✅</div>
+      <h2 style="font-family:'Outfit',sans-serif; font-size:1.8rem; margin-bottom:0.75rem;">Complaint Registered!</h2>
+      <p style="color:var(--text-secondary); margin-bottom:1.5rem;">Your complaint has been analyzed by AI and routed to the appropriate department.</p>
+      <div class="card" style="text-align:left; margin-bottom:1.5rem; background:var(--bg-secondary);">
+        <div class="ai-result-row">
+          <span class="ai-result-label">📋 Complaint ID</span>
+          <span class="ai-result-value" id="newComplaintId">—</span>
+        </div>
+        <div class="ai-result-row">
+          <span class="ai-result-label">🏢 Assigned To</span>
+          <span class="ai-result-value" id="assignedDept">—</span>
+        </div>
+        <div class="ai-result-row">
+          <span class="ai-result-label">⏱️ Expected Resolution</span>
+          <span class="ai-result-value" id="expectedTime">—</span>
+        </div>
+        <div class="ai-result-row" style="border-bottom:none;">
+          <span class="ai-result-label">🚨 Priority</span>
+          <span class="ai-result-value" id="finalPriority">—</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+        <a href="status.html" class="btn btn-primary">📋 Track My Complaint</a>
+        <button class="btn btn-outline" onclick="closeModal()">Submit Another</button>
+      </div>
+    </div>
+  </div>
+
+  <a href="chatbot.html" class="fab" title="Ask AI Assistant">💬</a>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="db_shim.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // ============================================================
+    // EMAILJS CONFIG — must match dashboard.html settings
+    // See setup instructions in dashboard.html comments
+    // ============================================================
+    const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';
+    const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';
+    const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+
+    function sendReceiptEmail(toEmail, toName, complaintId, category, department, eta) {
+      if (EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') return;
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: toEmail,
+        to_name: toName || 'Citizen',
+        subject: `✅ Complaint Received: ${complaintId}`,
+        complaint_id: complaintId,
+        category: category || '—',
+        department: department || '—',
+        eta: eta || '3-5 days',
+        message: `Dear ${toName || 'Citizen'},\n\nYour complaint has been successfully registered on SiliconSahaaya and assigned to ${department || 'the relevant department'}.\n\nComplaint ID: ${complaintId}\nExpected Resolution: ${eta || '3-5 days'}\n\nYou can track your complaint at any time on our platform.\n\nTeam SiliconSahaaya`
+      }).then(() => {
+        showToast('📧', 'Email Sent!', `Confirmation sent to ${toEmail}`, 'success');
+      }).catch(err => {
+        console.warn('EmailJS error:', err);
+      });
+    }
+  </script>
+  <script>
+    let selectedLang = 'en';
+    let locationMap, locationMarker;
+    let analysisTimer;
+
+    // Init Location Map
+    setTimeout(() => {
+      locationMap = L.map('locationMap', { zoomControl: true }).setView([12.9716, 77.5946], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(locationMap);
+      locationMarker = L.marker([12.9716, 77.5946], { draggable: true }).addTo(locationMap);
+      locationMarker.on('dragend', (e) => {
+        const pos = e.target.getLatLng();
+        document.getElementById('lat').value = pos.lat.toFixed(6);
+        document.getElementById('lng').value = pos.lng.toFixed(6);
+      });
+    }, 300);
+
+    function selectLang(btn, lang) {
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedLang = lang;
+      const placeholders = {
+        'en': 'Describe the issue... e.g. "There is a huge pothole on MG Road near metro station"',
+        'hi': 'समस्या बताएं... जैसे "एमजी रोड पर बहुत बड़ा गड्ढा है"',
+        'kn': 'ಸಮಸ್ಯೆ ವಿವರಿಸಿ... ಉದಾ. "ರಸ್ತೆಯಲ್ಲಿ ದೊಡ್ಡ ಗುಂಡಿ ಇದೆ"',
+        'ta': 'பிரச்சனை விவரி... எ.கா. "ரோட்டில் பெரிய குழி இருக்கிறது"',
+        'te': 'సమస్య వివరించండి... ఉదా. "రోడ్డులో పెద్ద గుంత ఉంది"'
+      };
+      document.getElementById('complaintText').placeholder = placeholders[lang] || placeholders['en'];
+      if (lang !== 'en') {
+        showToast('🌐', 'Language Selected', `AI will auto-translate ${btn.textContent.trim()} to English`, 'info');
+      }
+    }
+
+    const departments = {
+      'roads': { name: 'Public Works Department', icon: '🛣️', desc: 'Handles all road and infrastructure issues' },
+      'garbage': { name: 'Sanitation Department', icon: '🗑️', desc: 'Manages garbage collection and waste management' },
+      'water': { name: 'Water Authority (BWSSB)', icon: '💧', desc: 'Handles water supply and drainage issues' },
+      'streetlight': { name: 'BESCOM / Electrical Dept', icon: '💡', desc: 'Manages street lighting and electrical issues' },
+      'sewage': { name: 'BWSSB Sewage Division', icon: '🚿', desc: 'Handles sewer and drainage issues' },
+      'parks': { name: 'Parks & Recreation Dept', icon: '🌿', desc: 'Manages public parks and green spaces' },
+      'noise': { name: 'Environmental Authority', icon: '📢', desc: 'Handles noise and pollution complaints' },
+      'other': { name: 'General Administration', icon: '🏛️', desc: 'Routes to appropriate department after review' }
+    };
+
+    function analyzeText(text) {
+      clearTimeout(analysisTimer);
+      if (text.length < 10) {
+        document.getElementById('aiAnalysisBox').style.display = 'none';
+        document.getElementById('translateBox').classList.remove('show');
+        return;
+      }
+
+      analysisTimer = setTimeout(() => {
+        document.getElementById('aiAnalysisBox').style.display = 'block';
+        document.getElementById('aiSpinner').style.display = 'inline-block';
+
+        setTimeout(() => {
+          document.getElementById('aiSpinner').style.display = 'none';
+
+          const langNames = { en: 'English 🇬🇧', hi: 'Hindi 🇮🇳', kn: 'Kannada 🇮🇳', ta: 'Tamil 🇮🇳', te: 'Telugu 🇮🇳' };
+
+          // Simulate AI analysis
+          const keywords = text.toLowerCase();
+          let cat = 'other', urgency = 'MEDIUM', sentiment = '😐 Neutral (0.45)', eta = '3-5 days', priority = 55;
+
+          if (keywords.includes('pothole') || keywords.includes('road') || keywords.includes('गड्ढा') || keywords.includes('ಗುಂಡಿ') || keywords.includes('రోడ్')) {
+            cat = 'roads'; urgency = 'HIGH'; sentiment = '😠 Frustrated (0.78)'; eta = '3-5 days'; priority = 78;
+          } else if (keywords.includes('garbage') || keywords.includes('waste') || keywords.includes('कचरा') || keywords.includes('ಕಸ') || keywords.includes('குப்பை')) {
+            cat = 'garbage'; urgency = 'HIGH'; sentiment = '😠 Angry (0.85)'; eta = '1-2 days'; priority = 85;
+          } else if (keywords.includes('water') || keywords.includes('leak') || keywords.includes('पानी') || keywords.includes('ನೀರು') || keywords.includes('నీరు')) {
+            cat = 'water'; urgency = 'CRITICAL'; sentiment = '😰 Alarmed (0.90)'; eta = '24 hours'; priority = 92;
+          } else if (keywords.includes('light') || keywords.includes('dark') || keywords.includes('बत्ती')) {
+            cat = 'streetlight'; urgency = 'LOW'; sentiment = '😐 Concerned (0.40)'; eta = '5-7 days'; priority = 45;
+          }
+
+          // Update UI
+          document.getElementById('detectedLang').innerHTML = `<span class="badge badge-primary">${langNames[selectedLang]}</span>`;
+          document.getElementById('predictedCategory').innerHTML = `<span class="badge badge-cyan">${departments[cat]?.name || 'General'}</span>`;
+          document.getElementById('urgencyLevel').innerHTML = urgency === 'CRITICAL' ? `<span class="badge badge-rose">⚠️ CRITICAL</span>` :
+            urgency === 'HIGH' ? `<span class="badge badge-amber">🔶 HIGH</span>` : `<span class="badge badge-emerald">🟢 ${urgency}</span>`;
+          document.getElementById('sentimentScore').textContent = sentiment;
+          document.getElementById('predictedETA').innerHTML = `<span class="badge badge-primary">${eta}</span>`;
+          document.getElementById('priorityScore').innerHTML = `<strong style="font-size:1.2rem;color:${priority>75?'#f43f5e':priority>50?'#f59e0b':'#10b981'}">${priority}/100</strong>`;
+          document.getElementById('priorityBar').style.width = priority + '%';
+          document.getElementById('priorityBar').style.background = priority > 75 ? 'linear-gradient(135deg,#f43f5e,#f97316)' :
+            priority > 50 ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#10b981,#06b6d4)';
+
+          // Set category
+          document.getElementById('complaintCategory').value = cat;
+          updateRouting();
+
+          // Show translation for non-English
+          if (selectedLang !== 'en') {
+            const translatedMap = {
+              hi: 'Translation: "' + (text.includes('गड्ढा') ? 'There is a very large pothole on the road' : text.includes('कचरा') ? 'There is a lot of garbage' : 'There is a civic issue that needs attention') + '"',
+              kn: 'Translation: "' + (text.includes('ಗುಂಡಿ') ? 'There is a large pothole on the road' : 'There is a civic issue that needs attention') + '"',
+              ta: 'Translation: "' + (text.includes('குப்பை') ? 'Garbage is piling up everywhere' : 'There is a civic issue that needs attention') + '"',
+              te: 'Translation: "' + (text.includes('నీరు') ? 'Water is leaking from the main pipe' : 'There is a civic issue that needs attention') + '"'
+            };
+            document.getElementById('translatedText').textContent = translatedMap[selectedLang] || '';
+            document.getElementById('translateBox').classList.add('show');
+          }
+
+          // Show duplicates
+          checkDuplicates(cat);
+
+        }, 1200);
+      }, 600);
+    }
+
+    function updateRouting() {
+      const cat = document.getElementById('complaintCategory').value;
+      if (cat && departments[cat]) {
+        const d = departments[cat];
+        document.getElementById('deptName').textContent = d.icon + ' ' + d.name;
+        document.getElementById('deptDesc').textContent = d.desc;
+      }
+    }
+
+    function checkDuplicates(cat) {
+      const existing = JSON.parse(localStorage.getItem('complaints') || '[]');
+      const similar = existing.filter(c => c.cat === cat).slice(0, 3);
+
+      const statusEl = document.getElementById('duplicateStatus');
+      const panel = document.getElementById('similarPanel');
+
+      if (similar.length > 0) {
+        statusEl.innerHTML = `<div class="alert alert-warning" style="font-size:0.8rem;">⚠️ ${similar.length} similar complaint(s) found nearby. Your complaint will be merged into the existing cluster.</div>`;
+        panel.style.display = 'block';
+        const listEl = document.getElementById('similarList');
+        listEl.innerHTML = similar.map(s => `
+          <div class="similar-complaint">
+            <div style="font-weight:600; margin-bottom:2px;">${s.id}</div>
+            <div style="color:var(--text-muted);">${s.text ? s.text.slice(0, 60) : '—'}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;">
+              <span style="color:var(--accent-emerald);">Same category</span>
+              <span>${s.status || 'Pending'}</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        statusEl.innerHTML = `<div class="alert alert-success" style="font-size:0.8rem;">✅ No duplicates found. This is a unique complaint.</div>`;
+        panel.style.display = 'none';
+      }
+    }
+
+    function getCurrentLocation() {
+      if (navigator.geolocation) {
+        showToast('📡', 'Getting Location', 'Accessing your GPS...', 'info');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            document.getElementById('lat').value = latitude.toFixed(6);
+            document.getElementById('lng').value = longitude.toFixed(6);
+            if (locationMap && locationMarker) {
+              locationMap.setView([latitude, longitude], 15);
+              locationMarker.setLatLng([latitude, longitude]);
+            }
+            showToast('✅', 'Location Found', `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`, 'success');
+          },
+          () => {
+            showToast('⚠️', 'GPS Unavailable', 'Using default Bengaluru location', 'warning');
+          }
+        );
+      }
+    }
+
+    function handleImages(files) {
+      const grid = document.getElementById('imagePreviewGrid');
+      const cvResults = document.getElementById('cvResults');
+      const detList = document.getElementById('cvDetectionList');
+      grid.innerHTML = '';
+      detList.innerHTML = '';
+      cvResults.style.display = 'none';
+
+      if (!files.length) return;
+      showToast('🔍', 'AI Vision Active', 'Analyzing images for civic issues...', 'info');
+
+      Array.from(files).slice(0, 6).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const item = document.createElement('div');
+          item.classList.add('preview-item');
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          item.appendChild(img);
+          grid.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      setTimeout(() => {
+        cvResults.style.display = 'block';
+        detList.innerHTML = `
+          <div class="alert alert-info" style="font-size:0.8rem; display:block;">
+            <strong>📷 Photos Attached:</strong><br/>
+            ${files.length} image(s) uploaded. These will be reviewed by the department.
+          </div>
+        `;
+        showToast('✅', 'Photos Attached', 'Images will be reviewed by the assigned department.', 'success');
+      }, 800);
+    }
+
+    // Form submit
+    document.getElementById('complaintForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name  = document.getElementById('citizenName').value.trim();
+      const text  = document.getElementById('complaintText').value.trim();
+      const email = document.getElementById('citizenEmail').value.trim();
+      const phone = document.getElementById('citizenPhone').value.trim();
+      if (!name || !text) {
+        showToast('❌', 'Missing Fields', 'Please fill in your name and complaint description', 'error');
+        return;
+      }
+      if (!email) {
+        showToast('❌', 'Email Required', 'Please provide your email to receive notifications', 'error');
+        return;
+      }
+
+      document.getElementById('submitBtn').innerHTML = '<span class="spinner"></span> Submitting & AI Analyzing...';
+      document.getElementById('submitBtn').disabled = true;
+
+      setTimeout(() => {
+        const cat  = document.getElementById('complaintCategory').value || 'other';
+        const dept = departments[cat] || departments['other'];
+        const id   = 'GR-2024-' + Math.floor(1000 + Math.random() * 9000);
+        const eta  = document.getElementById('predictedETA').textContent || '3-5 days';
+        const priority = parseInt(document.getElementById('priorityScore').textContent) || 80;
+
+        document.getElementById('newComplaintId').textContent = id;
+        document.getElementById('assignedDept').textContent = dept.icon + ' ' + dept.name;
+        document.getElementById('expectedTime').textContent = eta;
+        document.getElementById('finalPriority').innerHTML = `<span class="badge ${priority > 75 ? 'badge-rose' : 'badge-amber'}">${priority > 75 ? 'HIGH' : 'MEDIUM'} PRIORITY</span>`;
+
+        document.getElementById('successModal').classList.remove('hidden');
+        document.getElementById('submitBtn').innerHTML = '🚀 Submit Complaint with AI Analysis';
+        document.getElementById('submitBtn').disabled = false;
+
+        // Save to localStorage (including email for notifications)
+        const complaints = JSON.parse(localStorage.getItem('complaints') || '[]');
+        complaints.unshift({
+          id, name, email, phone, text,
+          lang: selectedLang, cat, dept: dept.name,
+          status: 'Pending', priority,
+          lat: document.getElementById('lat').value,
+          lng: document.getElementById('lng').value,
+          eta, timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('complaints', JSON.stringify(complaints));
+
+        // Send confirmation email to citizen
+        if (document.getElementById('notifyCheck').checked && email) {
+          sendReceiptEmail(email, name, id, cat, dept.name, eta);
+          // Log notification
+          const logs = JSON.parse(localStorage.getItem('emailLogs') || '[]');
+          logs.unshift({ type: 'received', email, complaintId: id, name, timestamp: new Date().toISOString() });
+          localStorage.setItem('emailLogs', JSON.stringify(logs.slice(0, 50)));
+        }
+
+      }, 2500);
+    });
+
+    function closeModal() {
+      document.getElementById('successModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

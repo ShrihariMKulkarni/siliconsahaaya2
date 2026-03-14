@@ -1,0 +1,31 @@
+{
+  "complaints": [
+    [
+      {
+        "id": "GR-2024-7305",
+        "name": "Ritesh",
+        "email": "riteshpatil9686@gmail.com",
+        "phone": "0987654323",
+        "text": "toilet ganda",
+        "lang": "en",
+        "cat": "other",
+        "dept": "General Administration",
+        "status": "Pending",
+        "priority": 55,
+        "lat": "13.074353",
+        "lng": "77.499773",
+        "eta": "3-5 days",
+        "timestamp": "2026-03-14T04:03:44.226Z"
+      }
+    ]
+  ],
+  "emailLogs": [
+    {
+      "type": "received",
+      "email": "riteshpatil9686@gmail.com",
+      "complaintId": "GR-2024-7305",
+      "name": "Ritesh",
+      "timestamp": "2026-03-14T04:03:44.230Z"
+    }
+  ]
+}
